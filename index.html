@@ -125,7 +125,6 @@
             box-shadow: var(--shadow);
         }
 
-        /* تنسيق حاوية السهم لتشبه النود والنص في الدوران */
         .arrow-node {
             display: flex;
             align-items: center;
@@ -146,7 +145,7 @@
         .controls { 
             display: none; 
             position: absolute; 
-            top: -200px; 
+            top: -220px; 
             left: 50%; 
             transform: translateX(-50%); 
             gap: 10px; 
@@ -157,7 +156,7 @@
             z-index: 500; 
             align-items: center; 
             color: white; 
-            width: 380px; 
+            width: 400px; 
             flex-wrap: wrap; 
             justify-content: center; 
             box-shadow: 0 10px 25px rgba(0,0,0,0.4); 
@@ -177,13 +176,14 @@
 
         .val-label {
             background: #475569;
-            padding: 2px 6px;
+            padding: 2px 4px;
             border-radius: 4px;
             font-size: 11px;
-            min-width: 35px;
+            min-width: 40px;
             text-align: center;
-            display: inline-block;
             color: #10b981;
+            border: 1px solid #64748b;
+            outline: none;
         }
 
         .del-btn { 
@@ -224,11 +224,17 @@
         </div>
 
         <div class="export-box">
-            <button style="background:#059669" onclick="generateLink()">☁️ رفع ونسخ الرابط (جودة فائقة ومصلحة)</button>
-            <input type="text" id="image-link" readonly placeholder="رابط الصورة سيظهر هنا">
+            <button style="background:#059669" onclick="generateLink()">☁️ رفع ونسخ رابط الصورة</button>
+            <input type="text" id="image-link" readonly placeholder="رابط الصورة">
+        </div>
+
+        <div class="export-box">
+            <button style="background:#6366f1" onclick="exportData()">📤 تصدير ملف</button>
+            <button style="background:#f59e0b" onclick="document.getElementById('importFile').click()">📥 استيراد ملف</button>
+            <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(this)">
         </div>
         
-        <button style="background:var(--danger); margin-right: auto;" onclick="clearAllData()">🗑️ مسح المختبر بالكامل</button>
+        <button style="background:var(--danger); margin-right: auto;" onclick="clearAllData()">🗑️ مسح الكل</button>
     </div>
 
     <div class="scroll-box">
@@ -251,7 +257,7 @@
         });
     }
 
-    async function saveToDB() {
+    async function getFullData() {
         const items = [];
         document.querySelectorAll('.new-item').forEach(el => {
             const type = el.getAttribute('data-type');
@@ -268,12 +274,15 @@
             items.push(data);
         });
 
-        const mapData = {
+        return {
             width: document.getElementById('map-w').value,
             height: document.getElementById('map-h').value,
             items: items
         };
+    }
 
+    async function saveToDB() {
+        const mapData = await getFullData();
         const db = await openDB();
         const tx = db.transaction(storeName, "readwrite");
         tx.objectStore(storeName).put(mapData, "current_map");
@@ -284,17 +293,18 @@
         const tx = db.transaction(storeName, "readonly");
         const request = tx.objectStore(storeName).get("current_map");
         request.onsuccess = () => {
-            if(request.result) {
-                const data = request.result;
-                if(data.width && data.height) {
-                    document.getElementById('map-w').value = data.width;
-                    document.getElementById('map-h').value = data.height;
-                    updateMapSize(false); 
-                }
-                const items = Array.isArray(data) ? data : data.items;
-                if(items) items.forEach(d => createNew(d.type, d));
-            }
+            if(request.result) renderData(request.result);
         };
+    }
+
+    function renderData(data) {
+        if(data.width && data.height) {
+            document.getElementById('map-w').value = data.width;
+            document.getElementById('map-h').value = data.height;
+            updateMapSize(false); 
+        }
+        const items = Array.isArray(data) ? data : data.items;
+        if(items) items.forEach(d => createNew(d.type, d));
     }
 
     function updateMapSize(shouldSave = true) {
@@ -325,7 +335,8 @@
         let inner = `<div class="controls" onclick="event.stopPropagation()">
             <div class="del-btn" title="حذف" onclick="this.closest('.draggable').remove();saveToDB();">×</div>
             🎨 <input type="color" value="${c}" oninput="updateStyle(this, 'c')">
-            🔄 الاتجاه <input type="range" min="0" max="360" value="${r}" class="rot-slider" oninput="updateRotate(this)"> <span class="val-label">${r}°</span>
+            🔄 الاتجاه <input type="range" min="0" max="360" value="${r}" class="rot-slider" oninput="updateRotate(this)"> 
+            <input type="number" value="${r}" class="val-label" oninput="updateRotate(this)">
             📏 الحجم <input type="range" min="${isScaleType?0.3:20}" max="${isScaleType?5:600}" step="${isScaleType?0.1:1}" value="${sz}" oninput="updateStyle(this, 'sz')"> <span class="val-label">${sz}</span>
             🖋️ السمك <input type="range" min="1" max="15" value="${th}" oninput="updateStyle(this, 'th')"> <span class="val-label">${th}</span>
             <button class="control-btn" onclick="editTxt(this)">✍️ تعديل النص</button>
@@ -342,7 +353,6 @@
                       </svg>`;
         } else if (type === 'arrow') {
             const headSize = th * 2.5;
-            // استخدام div حاوية للسهم وتدويرها بالكامل مثل المربعات
             inner += `<div class="arrow-node" style="transform:rotate(${r}deg); transform-origin: center center;">
                         <svg width="${parseFloat(sz) + 30}" height="60" style="overflow:visible;">
                             <line x1="0" y1="30" x2="${sz}" y2="30" style="stroke:${c}; stroke-width:${th}" />
@@ -396,7 +406,6 @@
         const type = el.getAttribute('data-type');
         if(type !== 'arrow') return;
         const sliders = el.querySelectorAll('input[type="range"]');
-        const rot = sliders[0].value;
         const sz = sliders[1].value;
         const th = sliders[2].value;
         const c = el.querySelector('input[type="color"]').value;
@@ -413,15 +422,20 @@
     function updateRotate(input) {
         const el = input.closest('.draggable');
         const type = el.getAttribute('data-type');
-        const label = input.nextElementSibling;
-        if(label) label.innerText = input.value + '°';
+        const sliders = el.querySelectorAll('input[type="range"]');
+        const numberInput = el.querySelector('input[type="number"]');
+        const rotSlider = el.querySelector('.rot-slider');
+        
+        const val = input.value;
+        rotSlider.value = val;
+        numberInput.value = val;
         
         const target = el.querySelector('.node, .label, svg, .arrow-node');
         if(type === 'box' || type === 'text') {
-            const scale = el.querySelectorAll('input[type="range"]')[1].value;
-            target.style.transform = `rotate(${input.value}deg) scale(${scale})`;
+            const scale = sliders[1].value;
+            target.style.transform = `rotate(${val}deg) scale(${scale})`;
         } else {
-            target.style.transform = `rotate(${input.value}deg)`;
+            target.style.transform = `rotate(${val}deg)`;
         }
         saveToDB();
     }
@@ -449,6 +463,39 @@
         if(!target) return;
         const n = prompt("اكتب النص (~ للرقم السفلي مثل H~2O):", target.innerText);
         if(n !== null) { target.innerHTML = chemify(n); saveToDB(); }
+    }
+
+    // تصدير البيانات كملف JSON
+    async function exportData() {
+        const data = await getFullData();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `MedoLab_Backup_${new Date().getTime()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // استيراد البيانات من ملف JSON
+    function importData(input) {
+        const file = input.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if(confirm('سيتم مسح المختبر الحالي وتحميل التصميم من الملف، هل أنت متأكد؟')) {
+                    mapArea.innerHTML = "";
+                    renderData(data);
+                    await saveToDB();
+                }
+            } catch (err) {
+                alert("خطأ في قراءة الملف، تأكد أنه ملف .json صالح.");
+            }
+        };
+        reader.readAsText(file);
+        input.value = ""; // تصفير الملف ليتمكن من رفعه مرة أخرى إذا لزم الأمر
     }
 
     document.addEventListener('pointerdown', (e) => {
@@ -489,22 +536,17 @@
     async function generateLink() {
         deselectAll();
         const input = document.getElementById('image-link');
-        input.value = "⏳ جاري المعالجة والرفع...";
+        input.value = "⏳ جاري المعالجة...";
         
         await new Promise(r => setTimeout(r, 300));
 
         const options = {
             backgroundColor: "#ffffff",
-            scale: 4, 
+            scale: 3, 
             useCORS: true,
             allowTaint: true,
-            scrollX: 0,
-            scrollY: 0,
-            x: 0,
-            y: 0,
             width: mapArea.scrollWidth,
             height: mapArea.scrollHeight,
-            logging: false
         };
 
         try {
@@ -512,7 +554,7 @@
             canvas.toBlob(async (blob) => {
                 const formData = new FormData();
                 formData.append('reqtype', 'fileupload');
-                formData.append('fileToUpload', blob, 'ChemLab_Final.png');
+                formData.append('fileToUpload', blob, 'ChemLab.png');
                 
                 const res = await fetch('https://corsproxy.io/?https://catbox.moe/user/api.php', { 
                     method: 'POST', 
@@ -523,14 +565,13 @@
                     const link = await res.text();
                     input.value = link;
                     navigator.clipboard.writeText(link);
-                    alert("✅ تم الرفع بنجاح! .");
+                    alert("✅ تم رفع الصورة ونسخ الرابط بنجاح!");
                 } else { 
                     input.value = "❌ فشل الرفع"; 
                 }
-            }, 'image/png', 1.0);
+            }, 'image/png');
         } catch (err) {
-            console.error(err);
-            input.value = "❌ خطأ في التقاط الصورة";
+            input.value = "❌ خطأ في التحويل";
         }
     }
 
