@@ -218,6 +218,8 @@
         <button onclick="createNew('text')">📝 نص</button>
         <button onclick="createNew('arrow')" style="background: #f1c40f; color: #000;">➡️ سهم</button>
         
+        <button onclick="window.location.href='explain.html'" style="background: #475569;">⚙️ الإعدادات</button>
+
         <div class="export-box">
             📐 العرض: <input type="number" id="map-w" class="size-input" value="3000" onchange="updateMapSize()">
             الطول: <input type="number" id="map-h" class="size-input" value="2500" onchange="updateMapSize()">
@@ -465,7 +467,6 @@
         if(n !== null) { target.innerHTML = chemify(n); saveToDB(); }
     }
 
-    // تصدير البيانات كملف JSON
     async function exportData() {
         const data = await getFullData();
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -477,7 +478,6 @@
         URL.revokeObjectURL(url);
     }
 
-    // استيراد البيانات من ملف JSON
     function importData(input) {
         const file = input.files[0];
         if(!file) return;
@@ -495,7 +495,7 @@
             }
         };
         reader.readAsText(file);
-        input.value = ""; // تصفير الملف ليتمكن من رفعه مرة أخرى إذا لزم الأمر
+        input.value = ""; 
     }
 
     document.addEventListener('pointerdown', (e) => {
