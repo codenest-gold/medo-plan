@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مختبر Medo - V3 </title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root { 
+            --bg: #f8fafc; 
+            --accent: #8b5cf6; 
+            --danger: #ef4444;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        body { 
+            background-color: #e2e8f0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; padding: 0; 
+            display: flex; flex-direction: column; 
+            height: 100vh; overflow: hidden; 
+            touch-action: none; 
+        }
+        
+        .toolbar { 
+            background: #1e293b; 
+            padding: 12px 20px; 
+            display: flex; gap: 12px; 
+            border-bottom: 3px solid var(--accent); 
+            z-index: 3000; 
+            align-items: center; 
+            flex-wrap: wrap; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        button { 
+            background: var(--accent); 
+            color: white; 
+            border: none; 
+            padding: 10px 18px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: transform 0.1s, background 0.2s; 
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        button:active { transform: scale(0.95); }
+        button:hover { background: #7c3aed; }
+        
+        .export-box { 
+            background: #0f172a; 
+            padding: 8px; 
+            border-radius: 8px; 
+            display: flex; 
+            gap: 8px; 
+            align-items: center; 
+            border: 1px solid #334155; 
+            color: white;
+            font-size: 13px;
+        }
+
+        .size-input {
+            background: #1e293b;
+            color: #10b981;
+            border: 1px solid #475569;
+            padding: 4px;
+            width: 60px;
+            border-radius: 4px;
+            outline: none;
+            text-align: center;
+        }
+
+        #image-link { 
+            background: #000; 
+            color: #10b981; 
+            border: 1px solid #334155; 
+            padding: 8px; 
+            font-size: 12px; 
+            width: 180px; 
+            border-radius: 6px; 
+            outline: none; 
+            font-family: monospace;
+        }
+
+        .scroll-box { 
+            flex: 1; 
+            overflow: auto; 
+            background-color: #cbd5e1; 
+            position: relative; 
+        }
+
+        #map-area { 
+            position: relative; 
+            width: 3000px; 
+            height: 2500px; 
+            background-color: #ffffff; 
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        
+        .draggable { 
+            position: absolute; 
+            z-index: 10; 
+            touch-action: none; 
+            cursor: move; 
+            padding: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: box-shadow 0.3s;
+        }
+
+        .node { 
+            padding: 12px 28px; 
+            border-radius: 12px; 
+            background: #ffffff; 
+            border: 2px solid #1e293b; 
+            text-align: center; 
+            font-weight: bold; 
+            color: #1e293b; 
+            pointer-events: none; 
+            box-shadow: var(--shadow);
+        }
+
+        /* تنسيق حاوية السهم لتشبه النود والنص في الدوران */
+        .arrow-node {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .active { 
+            z-index: 100 !important; 
+            outline: 2px dashed var(--accent); 
+            background: rgba(139, 92, 246, 0.05); 
+            border-radius: 8px; 
+        }
+
+        .label { padding: 5px; font-weight: bold; color: #000; pointer-events: none; white-space: nowrap; }
+        sub { font-size: 0.7em; vertical-align: sub; line-height: 0; }
+
+        .controls { 
+            display: none; 
+            position: absolute; 
+            top: -200px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            gap: 10px; 
+            background: #1e293b; 
+            padding: 15px; 
+            border-radius: 15px; 
+            border: 2px solid var(--accent); 
+            z-index: 500; 
+            align-items: center; 
+            color: white; 
+            width: 380px; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4); 
+        }
+
+        .active > .controls { display: flex; }
+
+        .control-btn { 
+            background: #334155; 
+            color: white; 
+            border: 1px solid #475569; 
+            padding: 6px 12px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 12px; 
+        }
+
+        .val-label {
+            background: #475569;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            min-width: 35px;
+            text-align: center;
+            display: inline-block;
+            color: #10b981;
+        }
+
+        .del-btn { 
+            background: var(--danger); 
+            color: white;
+            border-radius: 50%; 
+            width: 28px; 
+            height: 28px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: absolute; 
+            top: -12px; 
+            right: -12px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 600;
+        }
+        
+        .del-btn:hover { background: #dc2626; transform: scale(1.1); }
+
+        svg { filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.1)); }
+    </style>
+</head>
+<body onclick="deselectAll()">
+
+    <div class="toolbar">
+        <button onclick="createNew('box')">📦 مركب</button>
+        <button onclick="createNew('benzene')">⬢ بنزين</button>
+        <button onclick="createNew('text')">📝 نص</button>
+        <button onclick="createNew('arrow')" style="background: #f1c40f; color: #000;">➡️ سهم</button>
+        
+        <div class="export-box">
+            📐 العرض: <input type="number" id="map-w" class="size-input" value="3000" onchange="updateMapSize()">
+            الطول: <input type="number" id="map-h" class="size-input" value="2500" onchange="updateMapSize()">
+        </div>
+
+        <div class="export-box">
+            <button style="background:#059669" onclick="generateLink()">☁️ رفع ونسخ الرابط (جودة فائقة ومصلحة)</button>
+            <input type="text" id="image-link" readonly placeholder="رابط الصورة سيظهر هنا">
+        </div>
+        
+        <button style="background:var(--danger); margin-right: auto;" onclick="clearAllData()">🗑️ مسح المختبر بالكامل</button>
+    </div>
+
+    <div class="scroll-box">
+        <div id="map-area"></div>
+    </div>
+
+<script>
+    const mapArea = document.getElementById('map-area');
+    let activeEl = null;
+
+    const dbName = "ChemistryLabDB_V2";
+    const storeName = "diagrams";
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName, 1);
+            request.onupgradeneeded = () => request.result.createObjectStore(storeName);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async function saveToDB() {
+        const items = [];
+        document.querySelectorAll('.new-item').forEach(el => {
+            const type = el.getAttribute('data-type');
+            const ranges = el.querySelectorAll('input[type="range"]');
+            const data = {
+                type: type, left: el.style.left, top: el.style.top,
+                r: ranges[0].value,
+                sz: ranges[1].value,
+                th: ranges[2].value,
+                c: el.querySelector('input[type="color"]').value
+            };
+            const txt = el.querySelector('.node, .label');
+            if(txt) data.t = txt.innerText;
+            items.push(data);
+        });
+
+        const mapData = {
+            width: document.getElementById('map-w').value,
+            height: document.getElementById('map-h').value,
+            items: items
+        };
+
+        const db = await openDB();
+        const tx = db.transaction(storeName, "readwrite");
+        tx.objectStore(storeName).put(mapData, "current_map");
+    }
+
+    async function loadFromDB() {
+        const db = await openDB();
+        const tx = db.transaction(storeName, "readonly");
+        const request = tx.objectStore(storeName).get("current_map");
+        request.onsuccess = () => {
+            if(request.result) {
+                const data = request.result;
+                if(data.width && data.height) {
+                    document.getElementById('map-w').value = data.width;
+                    document.getElementById('map-h').value = data.height;
+                    updateMapSize(false); 
+                }
+                const items = Array.isArray(data) ? data : data.items;
+                if(items) items.forEach(d => createNew(d.type, d));
+            }
+        };
+    }
+
+    function updateMapSize(shouldSave = true) {
+        const w = document.getElementById('map-w').value;
+        const h = document.getElementById('map-h').value;
+        mapArea.style.width = w + 'px';
+        mapArea.style.height = h + 'px';
+        if(shouldSave) saveToDB();
+    }
+
+    function chemify(text) {
+        return text.replace(/~(-?\d+)/g, '<sub>$1</sub>');
+    }
+
+    function createNew(type, data = null) {
+        const div = document.createElement('div');
+        div.className = 'draggable new-item';
+        div.setAttribute('data-type', type);
+        div.style.left = data ? data.left : '250px';
+        div.style.top = data ? data.top : '250px';
+
+        const r = data ? data.r : 0;
+        const c = data ? data.c : (type === 'arrow' ? '#f1c40f' : '#1e293b');
+        const isScaleType = (type === 'box' || type === 'text');
+        const sz = data ? data.sz : (isScaleType ? 1 : (type === 'arrow' ? 100 : 80)); 
+        const th = data ? data.th : 2;
+
+        let inner = `<div class="controls" onclick="event.stopPropagation()">
+            <div class="del-btn" title="حذف" onclick="this.closest('.draggable').remove();saveToDB();">×</div>
+            🎨 <input type="color" value="${c}" oninput="updateStyle(this, 'c')">
+            🔄 الاتجاه <input type="range" min="0" max="360" value="${r}" class="rot-slider" oninput="updateRotate(this)"> <span class="val-label">${r}°</span>
+            📏 الحجم <input type="range" min="${isScaleType?0.3:20}" max="${isScaleType?5:600}" step="${isScaleType?0.1:1}" value="${sz}" oninput="updateStyle(this, 'sz')"> <span class="val-label">${sz}</span>
+            🖋️ السمك <input type="range" min="1" max="15" value="${th}" oninput="updateStyle(this, 'th')"> <span class="val-label">${th}</span>
+            <button class="control-btn" onclick="editTxt(this)">✍️ تعديل النص</button>
+            <button class="control-btn" style="background:#3b82f6" onclick="duplicateEl(this)">📋 نسخ</button>
+        </div>`;
+
+        if (isScaleType) {
+            const txt = data ? data.t : (type==='box'?'H~2O':'نص جديد');
+            inner += `<div class="${type==='box'?'node':'label'}" style="${type==='box'?'border-color':'color'}:${c}; border-width:${th}px; transform:rotate(${r}deg) scale(${sz}); transform-origin: center center;">${chemify(txt)}</div>`;
+        } else if (type === 'benzene') {
+            inner += `<svg viewBox="0 0 100 110" style="transform:rotate(${r}deg); width:${sz}px; height:auto; transform-origin: center center;">
+                        <polygon points="50,5 95,30 95,80 50,105 5,80 5,30" style="fill:none; stroke:${c}; stroke-width:${th}"/>
+                        <circle cx="50" cy="55" r="28" style="fill:none; stroke:${c}; stroke-width:${th}"/>
+                      </svg>`;
+        } else if (type === 'arrow') {
+            const headSize = th * 2.5;
+            // استخدام div حاوية للسهم وتدويرها بالكامل مثل المربعات
+            inner += `<div class="arrow-node" style="transform:rotate(${r}deg); transform-origin: center center;">
+                        <svg width="${parseFloat(sz) + 30}" height="60" style="overflow:visible;">
+                            <line x1="0" y1="30" x2="${sz}" y2="30" style="stroke:${c}; stroke-width:${th}" />
+                            <path d="M${sz-2} ${30-headSize} L${parseFloat(sz)+headSize*1.5} 30 L${sz-2} ${30+headSize} Z" style="fill:${c}; stroke:${c}; stroke-width:1" />
+                        </svg>
+                      </div>`;
+        }
+        
+        div.innerHTML = inner;
+        mapArea.appendChild(div);
+        if(!data) saveToDB();
+    }
+
+    function updateStyle(input, mode) {
+        const el = input.closest('.draggable');
+        const type = el.getAttribute('data-type');
+        const val = input.value;
+
+        if (mode === 'c') {
+            el.querySelectorAll('polygon, circle, line, path').forEach(s => {
+                s.style.stroke = val;
+                if(s.tagName === 'path') s.style.fill = val;
+            });
+            if(type==='box') el.querySelector('.node').style.borderColor = val;
+            if(type==='text') el.querySelector('.label').style.color = val;
+        }
+        if (mode === 'sz') {
+            const label = input.nextElementSibling;
+            if(label) label.innerText = val;
+            if(type === 'box' || type === 'text') {
+                const target = el.querySelector('.node, .label');
+                const rot = el.querySelector('.rot-slider').value;
+                target.style.transform = `rotate(${rot}deg) scale(${val})`;
+            } else if (type === 'arrow') {
+                updateArrowSVG(el);
+            } else {
+                el.querySelector('svg').style.width = val + 'px';
+            }
+        }
+        if (mode === 'th') {
+            const label = input.nextElementSibling;
+            if(label) label.innerText = val;
+            if(type === 'box') el.querySelector('.node').style.borderWidth = val + 'px';
+            if(type === 'arrow') updateArrowSVG(el);
+            el.querySelectorAll('polygon, circle').forEach(s => s.style.strokeWidth = val);
+        }
+        saveToDB();
+    }
+
+    function updateArrowSVG(el) {
+        const type = el.getAttribute('data-type');
+        if(type !== 'arrow') return;
+        const sliders = el.querySelectorAll('input[type="range"]');
+        const rot = sliders[0].value;
+        const sz = sliders[1].value;
+        const th = sliders[2].value;
+        const c = el.querySelector('input[type="color"]').value;
+        const headSize = th * 2.5;
+        
+        const container = el.querySelector('.arrow-node');
+        const svg = container.querySelector('svg');
+        svg.setAttribute('width', parseFloat(sz) + 30);
+        
+        svg.innerHTML = `<line x1="0" y1="30" x2="${sz}" y2="30" style="stroke:${c}; stroke-width:${th}" />
+                         <path d="M${sz-2} ${30-headSize} L${parseFloat(sz)+headSize*1.5} 30 L${sz-2} ${30+headSize} Z" style="fill:${c}; stroke:${c}; stroke-width:1" />`;
+    }
+
+    function updateRotate(input) {
+        const el = input.closest('.draggable');
+        const type = el.getAttribute('data-type');
+        const label = input.nextElementSibling;
+        if(label) label.innerText = input.value + '°';
+        
+        const target = el.querySelector('.node, .label, svg, .arrow-node');
+        if(type === 'box' || type === 'text') {
+            const scale = el.querySelectorAll('input[type="range"]')[1].value;
+            target.style.transform = `rotate(${input.value}deg) scale(${scale})`;
+        } else {
+            target.style.transform = `rotate(${input.value}deg)`;
+        }
+        saveToDB();
+    }
+
+    function duplicateEl(btn) {
+        const el = btn.closest('.draggable');
+        const type = el.getAttribute('data-type');
+        const ranges = el.querySelectorAll('input[type="range"]');
+        const data = {
+            type: type,
+            left: (parseInt(el.style.left) + 30) + 'px',
+            top: (parseInt(el.style.top) + 30) + 'px',
+            r: ranges[0].value,
+            sz: ranges[1].value,
+            th: ranges[2].value,
+            c: el.querySelector('input[type="color"]').value
+        };
+        const txt = el.querySelector('.node, .label');
+        if(txt) data.t = txt.innerText;
+        createNew(type, data);
+    }
+
+    function editTxt(btn) {
+        const target = btn.closest('.draggable').querySelector('.node, .label');
+        if(!target) return;
+        const n = prompt("اكتب النص (~ للرقم السفلي مثل H~2O):", target.innerText);
+        if(n !== null) { target.innerHTML = chemify(n); saveToDB(); }
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+        const el = e.target.closest('.draggable');
+        if (!el || e.target.closest('.controls')) return;
+        deselectAll();
+        activeEl = el;
+        el.classList.add('active');
+        let startX = e.clientX, startY = e.clientY, initL = el.offsetLeft, initT = el.offsetTop;
+        function move(ev) { 
+            if(!activeEl) return; 
+            el.style.left = (initL + (ev.clientX - startX)) + 'px'; 
+            el.style.top = (initT + (ev.clientY - startY)) + 'px'; 
+        }
+        function up() { 
+            document.removeEventListener('pointermove', move); 
+            document.removeEventListener('pointerup', up); 
+            saveToDB(); 
+        }
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', up);
+    });
+
+    function deselectAll() { 
+        document.querySelectorAll('.draggable').forEach(el => el.classList.remove('active')); 
+        activeEl = null; 
+    }
+
+    async function clearAllData() {
+        if(confirm('هل تريد مسح المخطط بالكامل؟ لا يمكن التراجع عن هذه الخطوة.')) {
+            const db = await openDB();
+            const tx = db.transaction(storeName, "readwrite");
+            tx.objectStore(storeName).delete("current_map");
+            location.reload();
+        }
+    }
+
+    async function generateLink() {
+        deselectAll();
+        const input = document.getElementById('image-link');
+        input.value = "⏳ جاري المعالجة والرفع...";
+        
+        await new Promise(r => setTimeout(r, 300));
+
+        const options = {
+            backgroundColor: "#ffffff",
+            scale: 4, 
+            useCORS: true,
+            allowTaint: true,
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0,
+            width: mapArea.scrollWidth,
+            height: mapArea.scrollHeight,
+            logging: false
+        };
+
+        try {
+            const canvas = await html2canvas(mapArea, options);
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append('reqtype', 'fileupload');
+                formData.append('fileToUpload', blob, 'ChemLab_Final.png');
+                
+                const res = await fetch('https://corsproxy.io/?https://catbox.moe/user/api.php', { 
+                    method: 'POST', 
+                    body: formData 
+                });
+                
+                if(res.ok) {
+                    const link = await res.text();
+                    input.value = link;
+                    navigator.clipboard.writeText(link);
+                    alert("✅ تم الرفع بنجاح! .");
+                } else { 
+                    input.value = "❌ فشل الرفع"; 
+                }
+            }, 'image/png', 1.0);
+        } catch (err) {
+            console.error(err);
+            input.value = "❌ خطأ في التقاط الصورة";
+        }
+    }
+
+    window.onload = loadFromDB;
+</script>
+</body>
+</html>
